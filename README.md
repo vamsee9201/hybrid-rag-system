@@ -8,6 +8,8 @@ primary experimental variable.
 
 **[Open the live demo](https://govlens-265050340558.us-central1.run.app)**
 
+![Hybrid RAG Evaluation overview with lexical, semantic, and hybrid retrieval cards](docs/screenshots/hybrid-rag-overview.png)
+
 - **Lexical:** SQLite FTS5/BM25 for exact terms, names, dates, and citations.
 - **Semantic:** exact cosine search over 768-dimensional Vertex AI embeddings.
 - **Hybrid:** reciprocal-rank fusion of the BM25 and dense rankings.
@@ -17,6 +19,8 @@ context, offers 30 curated GovInfo questions as a rotating set of three
 suggestions, streams each answer independently, and exposes the retrieved
 evidence behind every result. Users can compare all three systems or run one
 retriever to reduce generation cost.
+
+![Completed Hybrid RAG comparison showing cited answers, latency, source count, and estimated cost](docs/screenshots/hybrid-rag-comparison-results.png)
 
 The deployment uses Cloud Run scale-to-zero, Firestore-backed quotas, and an
 application-level daily model budget. The deployment script is private by
