@@ -1,6 +1,6 @@
 import { ArrowUp, Code2, Columns3 } from 'lucide-react'
 import { FormEvent, useMemo, useRef, useState } from 'react'
-import { streamChat, submitFeedback } from './api'
+import { ChatRequestError, streamChat, submitFeedback } from './api'
 import { RagCard } from './RagCard'
 import type { CardState, Passage, RagAnswer, RagMode } from './types'
 
@@ -91,11 +91,16 @@ export default function App() {
         }
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') setGlobalError((error as Error).message)
+      if ((error as Error).name === 'AbortError') return
+      const message = error instanceof Error ? error.message : 'The request could not be completed.'
+      const isRequestLimit = error instanceof ChatRequestError && error.status === 429
+      setGlobalError(message)
       setCards((current) => {
         const next = { ...current }
         selectedModes.forEach((mode) => {
-          if (next[mode].status !== 'complete') next[mode] = { ...next[mode], status: 'error', error: 'The request could not be completed.' }
+          if (next[mode].status !== 'complete') {
+            next[mode] = isRequestLimit ? emptyCard() : { ...next[mode], status: 'error', error: message }
+          }
         })
         return next
       })

@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App, { questionBank } from './App'
+import { friendlyChatError } from './api'
 import { RagCard } from './RagCard'
 
 afterEach(cleanup)
@@ -41,5 +42,11 @@ describe('Hybrid RAG Evaluation UI', () => {
     expect(screen.getByRole('list')).toBeInTheDocument()
     expect(screen.getByText('High-Risk:').tagName).toBe('STRONG')
     expect(screen.queryByText(/\*\*High-Risk/)).not.toBeInTheDocument()
+  })
+
+  it('explains quota failures in user-facing language', () => {
+    expect(friendlyChatError(429, 'Daily answer limit reached for this client')).toMatch(/Daily demo limit reached/)
+    expect(friendlyChatError(429, 'The public demo has reached its daily model budget')).toMatch(/Daily demo budget reached/)
+    expect(friendlyChatError(429, 'Per-minute request limit reached')).toMatch(/wait one minute/)
   })
 })

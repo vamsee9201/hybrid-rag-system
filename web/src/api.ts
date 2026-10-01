@@ -2,6 +2,27 @@ import type { RagMode } from './types'
 
 export interface StreamEvent { event: string; data: Record<string, unknown> }
 
+export class ChatRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+    this.name = 'ChatRequestError'
+  }
+}
+
+export function friendlyChatError(status: number, detail?: string): string {
+  const normalized = (detail || '').toLowerCase()
+  if (status === 429 && normalized.includes('per-minute')) {
+    return 'Request limit reached. Please wait one minute, then try again.'
+  }
+  if (status === 429 && normalized.includes('daily model budget')) {
+    return 'Daily demo budget reached. New questions will be available after the quota resets at midnight UTC.'
+  }
+  if (status === 429) {
+    return 'Daily demo limit reached. This browser’s answer allowance resets at midnight UTC.'
+  }
+  return detail || `The request could not be completed (${status}).`
+}
+
 export async function* streamChat(
   message: string,
   modes: RagMode[],
@@ -15,7 +36,7 @@ export async function* streamChat(
   })
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.detail || `Request failed (${response.status})`)
+    throw new ChatRequestError(friendlyChatError(response.status, payload.detail), response.status)
   }
   if (!response.body) throw new Error('Streaming is unavailable in this browser')
   const reader = response.body.getReader()
