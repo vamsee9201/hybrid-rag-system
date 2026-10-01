@@ -22,12 +22,10 @@ retriever to reduce generation cost.
 
 ![Completed Hybrid RAG comparison showing cited answers, latency, source count, and estimated cost](docs/screenshots/hybrid-rag-comparison-results.png)
 
-The deployment uses Cloud Run scale-to-zero, Firestore-backed quotas, and an
-application-level daily model budget. The deployment script is private by
-default; public access must be enabled explicitly. Health, configuration,
-single-system generation, comparison streaming, quota, and citation paths have
-passed automated smoke tests. Published quality results are automated because
-the generated human-review worksheet has not yet been completed.
+The public demo allows five requests per minute and 20 generated answers per
+client each day. Compare mode uses three answers per question, while Single RAG
+mode uses one. A shared $0.50 daily model budget protects the project from
+unexpected usage. Daily limits reset at midnight UTC.
 
 ## What this project demonstrates
 
@@ -44,33 +42,19 @@ the generated human-review worksheet has not yet been completed.
 
 ## Architecture
 
-```text
-React comparison UI
-        |
-FastAPI SSE endpoint -- Firestore quota transaction
-        |
-single-turn query shared by all retrievers
-        |
-  +-----+--------------------+
-  |                          |
-SQLite FTS5             Vertex query embedding
-  |                          |
- BM25 top 30             cosine top 30
-  |          \              /|
-  |           RRF hybrid    |
-  +------------+------------+
-               |
-      top 5, max 2/document
-               |
-  three parallel Gemini Flash streams
-```
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Interface | React and TypeScript | Sends a single question to one or all retrieval modes and streams results independently. |
+| API | FastAPI with server-sent events | Coordinates retrieval, generation, citations, feedback, and partial failures. |
+| Lexical retrieval | SQLite FTS5/BM25 | Retrieves the top 30 passages using exact terms, names, dates, and phrases. |
+| Semantic retrieval | Vertex AI embeddings and NumPy | Embeds the query and performs exact cosine search over memory-mapped vectors. |
+| Hybrid retrieval | Reciprocal-rank fusion | Combines the BM25 and semantic rankings with equal weights and `k=60`. |
+| Context selection | Shared passage filter | Returns five passages per system with no more than two passages from one document. |
+| Answer generation | Gemini Flash | Generates three parallel, evidence-grounded answers with document and page citations. |
+| Runtime artifact | Cloud Storage | Stores the versioned SQLite database, embedding matrix, chunk IDs, and manifests loaded at startup. |
+| Usage limits | Firestore | Maintains shared per-minute, daily-client, and daily-budget counters across Cloud Run instances. |
 
-The immutable runtime artifact lives in a private Cloud Storage bucket. Each
-Cloud Run instance downloads and verifies it at cold start, then memory-maps the
-embedding matrix. Cloud Storage is artifact storage, not the online vector
-search engine.
-
-## Frozen configuration
+## Corpus and configuration
 
 | Component | Setting |
 |---|---|
@@ -89,76 +73,33 @@ search engine.
 | Generator | `gemini-3.8-flash` |
 | Generation | temperature 0, thinking off, maximum 300 tokens |
 
-The source `lean-rag` selection contained 50 scan-only documents. This project
-replaces them with 50 extractable documents from the larger downloaded GovInfo
-pool instead of purchasing OCR. The deterministic replacement manifest records
-every removed and added document.
-
-## Cost controls
-
-The preflight counted 109,226 chunks and 222,676,189 chunk characters. Its
-deliberately conservative token estimate projected:
-
-| Phase | Estimate |
-|---|---:|
-| Vertex batch embeddings | $10.24 conservative ceiling |
-| 300 benchmark answers | $1.06 |
-| Two-pass judging allowance | $5.00 |
-| Storage/jobs allowance | $1.00 |
-| **One-time estimate** | **$17.30** |
-
-The completed batch recorded 68,195,855 input tokens, costing approximately
-$8.18 at $0.12 per 1,000 tokens. Strict validation found 1,891 inputs above the
-2,048-token ceiling; shortened, non-truncated versions used another 3,404,042
-online tokens (approximately $0.51). The immutable 478 MiB archive contains a
-762 MiB SQLite database and a 320 MiB memory-mapped vector matrix.
-
-| Measured one-time phase | Cost |
-|---|---:|
-| Batch document embeddings | ~$8.18 |
-| Strict corrective embeddings | ~$0.51 |
-| 299 successful Flash answers | $0.66 |
-| 598 Pro judge calls | ~$1.09 |
-| **Measured model total** | **~$10.44** |
-
-Storage, Cloud Build, Artifact Registry, and Cloud Run add small infrastructure
-charges that are not included in the token-derived model total. The original
-$17.30 preflight remains the conservative all-in one-time estimate.
-
-The public service reserves a conservative maximum cost per answer and enforces:
-
-- $0.50 global estimated model budget per day.
-- 20 generated answers per salted IP hash per day.
-- Five requests per salted IP hash per minute.
-- No raw IP, prompt, answer, or conversation storage.
-- Cloud Run scale-to-zero, maximum three instances.
-- A $20 monthly GCP budget with alerts at $10, $15, and $20.
-
-Current prices can change. See [Vertex/Gemini pricing](https://cloud.google.com/vertex-ai/generative-ai/pricing)
-and [Cloud Run pricing](https://cloud.google.com/run/pricing). Gemini 3.8 Flash
-promotional pricing is scheduled to change on January 1, 2027, so the daily cap
-must be recalculated before then.
+The corpus contains 500 searchable GovInfo PDFs spanning 56,920 pages. Page text
+is split into 109,226 deterministic, page-bounded chunks of approximately 350
+words with a 50-word overlap. Every chunk retains its document ID, title, page,
+source URL, and citation metadata.
 
 ## Evaluation protocol
 
-The frozen 100-question benchmark combines:
+The evaluation uses 100 source-grounded questions drawn from the GovInfo corpus.
 
-- 50 legacy replication questions from `lean-rag`.
-- 50 document-disjoint confirmatory questions selected from the existing
-  source-grounded candidate pool.
+| Question type | Count |
+|---|---:|
+| Direct factual | 40 |
+| Numeric or date | 20 |
+| Multi-passage | 20 |
+| Cross-document | 10 |
+| Unanswerable | 10 |
 
-Together they contain 40 direct, 20 numeric/date, 20 multi-passage, 10
-cross-document, and 10 unanswerable questions. Every record includes a reference
-answer and exact supporting document/page labels. Retrieval is frozen before
-answer generation.
+Every question includes a reference answer and exact supporting document and
+page labels. Each question is run through BM25, semantic, and hybrid retrieval
+using the same generation settings. Retrieved passages are frozen before answer
+generation so retries cannot change the evidence.
 
 Retrieval reporting includes all-gold recall@5, passage recall, MRR, nDCG@5,
 cross-document recall, and latency. Answer reporting includes deterministic
 checks, exact citation validation, abstention accuracy, token F1, two randomized
 blinded Gemini 3.1 Pro judging passes, judge stability, cost, and latency. Paired
-differences use 10,000 bootstrap samples. A 20-question human-review sheet is
-generated, but automated results will not be described as human-validated until
-that sheet is completed.
+differences use 10,000 bootstrap samples.
 
 ### Measured retrieval results
 
@@ -194,15 +135,27 @@ exact agreement was 91.0% for BM25 and Dense and 85.9% for Hybrid. One Hybrid
 answer is recorded as a repeated Vertex `429 RESOURCE_EXHAUSTED` failure.
 
 Machine-readable headline results are in [`results/summary.json`](results/summary.json).
-Per-category generated outputs and the blinded human-review worksheet can be
-regenerated with the commands below. Multi-passage and cross-document questions
-were the clearest common failure area; unanswerable questions were easiest for
-all three systems.
+Multi-passage and cross-document questions were the clearest common failure
+area; unanswerable questions were easiest for all three systems.
+
+## Conclusion
+
+| System | Advantages | Tradeoffs | Best fit |
+|---|---|---|---|
+| BM25 | Strongest judged answer score, MRR, and nDCG@5; excellent with exact terminology, identifiers, dates, and citations; simple and inexpensive to operate. | Can miss relevant passages when the question and source use different vocabulary. | Structured government, legal, technical, and policy collections where exact language matters. |
+| Dense | Handles paraphrases and meaning across different wording; very fast local vector search after the query is embedded. | Requires an embedding call and vector storage; produced the weakest recall and answer scores on this terminology-heavy corpus. | Collections where users describe concepts differently from the source documents. |
+| Hybrid | Highest passage recall; combines exact matching with semantic coverage; more resilient when either retriever misses useful evidence. | Adds retrieval complexity and had the highest end-to-end latency; its answer score was not significantly better than BM25. | General-purpose search where missing a relevant passage is more costly than additional latency. |
+
+**Best overall for this corpus: BM25.** It produced the strongest answer score
+and ranking quality with lower complexity than Hybrid. Hybrid is the better
+choice when retrieval recall is the priority because it found the largest share
+of supporting passages. Dense retrieval is valuable as a complementary signal,
+but the evaluation does not support using it alone for this collection.
 
 ## Local development
 
-Prerequisites: Python 3.11+, Node 20.19+, a sibling `lean-rag` checkout with its
-data directory, and GCP credentials for paid operations.
+Prerequisites: Python 3.11+, Node 20.19+, prepared GovInfo source data, and GCP
+credentials for paid operations.
 
 ```bash
 make install
@@ -238,15 +191,15 @@ Run the frozen evaluation:
 python3 scripts/prepare_benchmark.py
 python3 scripts/evaluate_retrieval.py \
   --artifact data/artifacts/VERSION \
-  --questions data/generated/benchmark/legacy.jsonl data/generated/benchmark/confirmatory.jsonl
+  --questions data/generated/benchmark/*.jsonl
 python3 scripts/run_answers.py \
-  --questions data/generated/benchmark/legacy.jsonl data/generated/benchmark/confirmatory.jsonl \
+  --questions data/generated/benchmark/*.jsonl \
   --retrieval results/generated/retrieval.jsonl
 python3 scripts/judge_answers.py \
-  --questions data/generated/benchmark/legacy.jsonl data/generated/benchmark/confirmatory.jsonl \
+  --questions data/generated/benchmark/*.jsonl \
   --answers results/generated/answers.jsonl
 python3 scripts/summarize_evaluation.py \
-  --questions data/generated/benchmark/legacy.jsonl data/generated/benchmark/confirmatory.jsonl \
+  --questions data/generated/benchmark/*.jsonl \
   --answers results/generated/answers.jsonl \
   --judgments results/generated/judgments.jsonl
 ```
@@ -260,18 +213,3 @@ python3 scripts/summarize_evaluation.py \
 
 Every submission is independent and uses the same question for all selected
 retrievers. The application does not retain or reuse conversation context.
-
-## Security and limitations
-
-- Service-account keys and all local artifacts are excluded from Git and Docker.
-- Cloud Run uses a dedicated runtime identity, not the local credential file.
-- The runtime has Vertex invocation, structured-log writing, private index read,
-  secret read for one salt, and a custom no-delete Firestore document role.
-- Generated answers are constrained to retrieved passages but can still be
-  incomplete or wrong; citations should be inspected.
-- The corpus covers a stratified sample of GovInfo, not all U.S. government
-  publications or current law.
-- Model judging is automated and uses two randomized passes of the same judge;
-  it is not independent dual-model or human evaluation.
-- Budget alerts notify but do not stop billing. Application quotas provide the
-  variable-cost circuit breaker.
