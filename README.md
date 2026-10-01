@@ -253,10 +253,10 @@ python3 scripts/summarize_evaluation.py \
 
 ## API
 
-- `GET /api/health` — readiness and model/index versions.
-- `GET /api/config` — public corpus, mode, and limit configuration.
-- `POST /api/chat` — validated, single-turn SSE question answering for one or all retrievers.
-- `POST /api/feedback` — anonymous winner selection and reason tags.
+- `GET /api/health`: readiness and model/index versions.
+- `GET /api/config`: public corpus, mode, and limit configuration.
+- `POST /api/chat`: validated, single-turn SSE question answering for one or all retrievers.
+- `POST /api/feedback`: anonymous winner selection and reason tags.
 
 Every submission is independent and uses the same question for all selected
 retrievers. The application does not retain or reuse conversation context.
