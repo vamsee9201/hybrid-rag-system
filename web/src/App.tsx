@@ -156,6 +156,5 @@ export default function App() {
 
       <section className="examples" aria-label="Suggested questions"><span>TRY A QUESTION</span>{suggestedQuestions.map((example) => <button key={example} onClick={() => ask(undefined, example)}>{example}</button>)}</section>
     </main>
-    <footer className="site-footer"><span>Sources: U.S. GovInfo · Models: Vertex AI</span></footer>
   </div>
 }

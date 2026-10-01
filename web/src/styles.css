@@ -105,7 +105,6 @@ main { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 70px 0 42
 .examples { max-width: 900px; margin: 26px auto 0; display: grid; grid-template-columns: auto repeat(3, 1fr); gap: 9px; align-items: center; }
 .examples button { text-align: left; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; padding: 10px; border-radius: 8px; cursor: pointer; line-height: 1.4; }
 .examples button:hover { background: var(--paper); color: var(--ink); }
-.site-footer { display: flex; justify-content: flex-end; padding: 24px clamp(20px, 4vw, 64px); color: var(--ink); font-size: 10px; border-top: 1px solid var(--line); }
 
 @media (max-width: 1000px) {
   .card-grid { grid-template-columns: 1fr; }
@@ -120,7 +119,6 @@ main { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 70px 0 42
   .controls { flex-wrap: wrap; }
   .rag-card__header, .answer { padding-left: 18px; padding-right: 18px; }
   .feedback { flex-wrap: wrap; }
-  .site-footer { gap: 12px; flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {
