@@ -1,0 +1,37 @@
+# Credentials and local configuration
+ai-lab-fasa.json
+*.service-account.json
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Frontend
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Generated corpus, indexes, and evaluation outputs
+data/pdfs/
+data/processed/
+data/indexes/
+data/artifacts/
+data/generated/
+results/generated/
+*.npy
+*.sqlite3
+*.tar.gz
+
+# Local runtime state
+.cache/
+.gcloud/
+.DS_Store
+coverage/
+htmlcov/

@@ -1,0 +1,16 @@
+.gcloudignore
+.git
+.gitignore
+ai-lab-fasa.json
+.env
+.env.*
+!.env.example
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+data
+results/generated
+web/node_modules
+web/dist
+*.log

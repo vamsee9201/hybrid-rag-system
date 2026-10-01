@@ -1,0 +1,21 @@
+{
+  "status": "automated_evaluation_complete_with_one_documented_generation_failure",
+  "benchmark_questions": 100,
+  "retrieval": {
+    "bm25": {"all_gold_recall_at_5": 0.6222, "passage_recall_at_5": 0.6889, "mrr": 0.6917, "ndcg_at_5": 0.7208, "mean_ms": 160.47},
+    "dense": {"all_gold_recall_at_5": 0.4556, "passage_recall_at_5": 0.5389, "mrr": 0.5108, "ndcg_at_5": 0.5134, "mean_ms": 4.76},
+    "hybrid": {"all_gold_recall_at_5": 0.6222, "passage_recall_at_5": 0.7000, "mrr": 0.6667, "ndcg_at_5": 0.7060, "mean_ms": 165.48}
+  },
+  "answers": {
+    "bm25": {"completed": 100, "judge_score": 0.6367, "token_f1": 0.2287, "abstention_accuracy": 0.71, "valid_citation_rate": 1.0, "mean_generation_ms": 3494.99},
+    "dense": {"completed": 100, "judge_score": 0.5358, "token_f1": 0.1989, "abstention_accuracy": 0.61, "valid_citation_rate": 1.0, "mean_generation_ms": 3300.41},
+    "hybrid": {"completed": 99, "judge_score": 0.6170, "token_f1": 0.2234, "abstention_accuracy": 0.697, "valid_citation_rate": 1.0, "mean_generation_ms": 4742.75}
+  },
+  "paired_judge_score": {
+    "hybrid_minus_bm25": {"difference": -0.0168, "ci95": [-0.0732, 0.0387], "holm_p": 0.5556},
+    "hybrid_minus_dense": {"difference": 0.0859, "ci95": [0.0261, 0.1490], "holm_p": 0.0102},
+    "dense_minus_bm25": {"difference": -0.1008, "ci95": [-0.1775, -0.0267], "holm_p": 0.0136}
+  },
+  "judge": {"model": "gemini-3.1-pro-preview", "passes": 2, "records": 598, "human_review_completed": false},
+  "artifact": {"version": "v20260914-govinfo500", "sha256": "18e6e6655203acb39ea1b383e14c8f6510fdf9399ee9eebf134b2ba98626e20f"}
+}

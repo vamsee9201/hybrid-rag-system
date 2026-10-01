@@ -1,0 +1,11 @@
+.git
+.env*
+ai-lab-fasa.json
+*.service-account.json
+data
+reports
+results
+node_modules
+web/node_modules
+__pycache__
+.pytest_cache

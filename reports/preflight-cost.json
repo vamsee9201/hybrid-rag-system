@@ -1,0 +1,20 @@
+{
+  "created_at": "2026-09-14T01:29:13.073917+00:00",
+  "basis": "conservative preflight; replace with measured token counts after successful batch",
+  "chunks": 109226,
+  "characters": 222676189,
+  "conservative_embedding_tokens": 85359205,
+  "estimated": {
+    "embedding_batch_usd": 10.24,
+    "benchmark_answers_usd": 1.06,
+    "judge_allowance_usd": 5.0,
+    "storage_and_jobs_allowance_usd": 1.0,
+    "one_time_total_usd": 17.3,
+    "public_demo_target_usd_per_month": 15.0
+  },
+  "gates": {
+    "one_time_usd": 25.0,
+    "monthly_usd": 20.0
+  },
+  "approval_required": false
+}
